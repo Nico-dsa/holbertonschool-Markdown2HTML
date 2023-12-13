@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 """Markdown to HTML converter module"""
 import sys
 import os

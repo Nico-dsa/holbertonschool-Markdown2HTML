@@ -7,46 +7,58 @@ def markdown_to_html(lines):
     html_lines = []
     in_unordered_list = False
     in_ordered_list = False
+    paragraph = []
+
+    def close_lists():
+        if in_unordered_list:
+            html_lines.append("</ul>")
+        if in_ordered_list:
+            html_lines.append("</ol>")
+        return False, False
+
+    def process_paragraph():
+        if paragraph:
+            html_lines.append("<p>")
+            html_lines.append("<br />".join(paragraph))
+            html_lines.append("</p>")
+            paragraph.clear()
 
     for line in lines:
-        line = line.strip()
+        stripped_line = line.strip()
 
-        if line.startswith('#'):
+        if stripped_line.startswith('#'):
+            process_paragraph()
+            in_unordered_list, in_ordered_list = close_lists()
             # Handling headings
-            heading_level = line.count('#')
-            line = line.strip('# ')
-            html_lines.append(f"<h{heading_level}>{line}</h{heading_level}>")
-        elif line.startswith('- '):
-            # Handling unordered list items
+            heading_level = stripped_line.count('#')
+            stripped_line = stripped_line.strip('# ')
+            html_lines.append(f"<h{heading_level}>{stripped_line}</h{heading_level}>")
+        elif stripped_line.startswith('- '):
+            process_paragraph()
+            in_ordered_list = False
             if not in_unordered_list:
                 in_unordered_list = True
                 html_lines.append("<ul>")
-            line = line.strip('- ')
-            html_lines.append(f"<li>{line}</li>")
-        elif line.startswith('* '):
-            # Handling ordered list items
+            stripped_line = stripped_line.strip('- ')
+            html_lines.append(f"<li>{stripped_line}</li>")
+        elif stripped_line.startswith('* '):
+            process_paragraph()
+            in_unordered_list = False
             if not in_ordered_list:
                 in_ordered_list = True
                 html_lines.append("<ol>")
-            line = line.strip('* ')
-            html_lines.append(f"<li>{line}</li>")
+            stripped_line = stripped_line.strip('* ')
+            html_lines.append(f"<li>{stripped_line}</li>")
+        elif stripped_line:
+            if in_unordered_list or in_ordered_list:
+                in_unordered_list, in_ordered_list = close_lists()
+            paragraph.append(stripped_line)
         else:
-            if in_unordered_list:
-                # Closing the unordered list if it was open
-                in_unordered_list = False
-                html_lines.append("</ul>")
-            if in_ordered_list:
-                # Closing the ordered list if it was open
-                in_ordered_list = False
-                html_lines.append("</ol>")
-            html_lines.append(line)
+            process_paragraph()
+            in_unordered_list, in_ordered_list = close_lists()
 
-    if in_unordered_list:
-        # Close the unordered list if it's still open at the end of file
-        html_lines.append("</ul>")
-    if in_ordered_list:
-        # Close the ordered list if it's still open at the end of file
-        html_lines.append("</ol>")
+    process_paragraph()
+    in_unordered_list, in_ordered_list = close_lists()
 
     return '\n'.join(html_lines)
 

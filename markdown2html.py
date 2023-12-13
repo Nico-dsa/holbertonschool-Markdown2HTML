@@ -5,7 +5,8 @@ import os
 
 def markdown_to_html(lines):
     html_lines = []
-    in_list = False
+    in_unordered_list = False
+    in_ordered_list = False
 
     for line in lines:
         line = line.strip()
@@ -17,21 +18,35 @@ def markdown_to_html(lines):
             html_lines.append(f"<h{heading_level}>{line}</h{heading_level}>")
         elif line.startswith('- '):
             # Handling unordered list items
-            if not in_list:
-                in_list = True
+            if not in_unordered_list:
+                in_unordered_list = True
                 html_lines.append("<ul>")
             line = line.strip('- ')
             html_lines.append(f"<li>{line}</li>")
+        elif line.startswith('* '):
+            # Handling ordered list items
+            if not in_ordered_list:
+                in_ordered_list = True
+                html_lines.append("<ol>")
+            line = line.strip('* ')
+            html_lines.append(f"<li>{line}</li>")
         else:
-            if in_list:
-                # Closing the list if it was open
-                in_list = False
+            if in_unordered_list:
+                # Closing the unordered list if it was open
+                in_unordered_list = False
                 html_lines.append("</ul>")
+            if in_ordered_list:
+                # Closing the ordered list if it was open
+                in_ordered_list = False
+                html_lines.append("</ol>")
             html_lines.append(line)
 
-    if in_list:
-        # Close the list if it's still open at the end of file
+    if in_unordered_list:
+        # Close the unordered list if it's still open at the end of file
         html_lines.append("</ul>")
+    if in_ordered_list:
+        # Close the ordered list if it's still open at the end of file
+        html_lines.append("</ol>")
 
     return '\n'.join(html_lines)
 

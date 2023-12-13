@@ -3,21 +3,37 @@
 import sys
 import os
 
-def markdown_to_html(line):
-    # Determining the level of the heading
-    heading_level = 0
-    while line.startswith('#'):
-        heading_level += 1
-        line = line[1:]
+def markdown_to_html(lines):
+    html_lines = []
+    in_list = False
 
-    # Removing leading and trailing spaces
-    line = line.strip()
+    for line in lines:
+        line = line.strip()
 
-    # Converting to HTML
-    if heading_level > 0:
-        return f"<h{heading_level}>{line}</h{heading_level}>"
-    else:
-        return line
+        if line.startswith('#'):
+            # Handling headings
+            heading_level = line.count('#')
+            line = line.strip('# ')
+            html_lines.append(f"<h{heading_level}>{line}</h{heading_level}>")
+        elif line.startswith('- '):
+            # Handling unordered list items
+            if not in_list:
+                in_list = True
+                html_lines.append("<ul>")
+            line = line.strip('- ')
+            html_lines.append(f"<li>{line}</li>")
+        else:
+            if in_list:
+                # Closing the list if it was open
+                in_list = False
+                html_lines.append("</ul>")
+            html_lines.append(line)
+
+    if in_list:
+        # Close the list if it's still open at the end of file
+        html_lines.append("</ul>")
+
+    return '\n'.join(html_lines)
 
 def main():
     # Check if the number of arguments is less than 2
@@ -25,7 +41,6 @@ def main():
         print("Usage: ./markdown2html.py README.md README.html", file=sys.stderr)
         sys.exit(1)
 
-    # Assigning file names to variables
     markdown_file = sys.argv[1]
     output_file = sys.argv[2]
 
@@ -34,11 +49,13 @@ def main():
         print(f"Missing {markdown_file}", file=sys.stderr)
         sys.exit(1)
 
-    # Reading Markdown file and writing to HTML file
-    with open(markdown_file, 'r') as md_file, open(output_file, 'w') as html_file:
-        for line in md_file:
-            html_line = markdown_to_html(line)
-            html_file.write(html_line + '\n')
+    with open(markdown_file, 'r') as md_file:
+        lines = md_file.readlines()
+
+    html_content = markdown_to_html(lines)
+
+    with open(output_file, 'w') as html_file:
+        html_file.write(html_content)
 
     sys.exit(0)
 

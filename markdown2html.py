@@ -2,6 +2,7 @@
 """Markdown to HTML converter module"""
 import sys
 import os
+import re
 
 def markdown_to_html(lines):
     html_lines = []
@@ -10,17 +11,20 @@ def markdown_to_html(lines):
     paragraph = []
 
     def close_lists():
+        nonlocal in_unordered_list, in_ordered_list
         if in_unordered_list:
             html_lines.append("</ul>")
+            in_unordered_list = False
         if in_ordered_list:
             html_lines.append("</ol>")
-        return False, False
+            in_ordered_list = False
 
     def process_paragraph():
         if paragraph:
-            html_lines.append("<p>")
-            html_lines.append("<br />".join(paragraph))
-            html_lines.append("</p>")
+            text = " ".join(paragraph)
+            text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+            text = re.sub(r'__(.*?)__', r'<em>\1</em>', text)
+            html_lines.append(f"<p>{text}</p>")
             paragraph.clear()
 
     for line in lines:
@@ -28,14 +32,13 @@ def markdown_to_html(lines):
 
         if stripped_line.startswith('#'):
             process_paragraph()
-            in_unordered_list, in_ordered_list = close_lists()
+            close_lists()
             # Handling headings
             heading_level = stripped_line.count('#')
             stripped_line = stripped_line.strip('# ')
             html_lines.append(f"<h{heading_level}>{stripped_line}</h{heading_level}>")
         elif stripped_line.startswith('- '):
             process_paragraph()
-            in_ordered_list = False
             if not in_unordered_list:
                 in_unordered_list = True
                 html_lines.append("<ul>")
@@ -43,7 +46,6 @@ def markdown_to_html(lines):
             html_lines.append(f"<li>{stripped_line}</li>")
         elif stripped_line.startswith('* '):
             process_paragraph()
-            in_unordered_list = False
             if not in_ordered_list:
                 in_ordered_list = True
                 html_lines.append("<ol>")
@@ -51,14 +53,13 @@ def markdown_to_html(lines):
             html_lines.append(f"<li>{stripped_line}</li>")
         elif stripped_line:
             if in_unordered_list or in_ordered_list:
-                in_unordered_list, in_ordered_list = close_lists()
+                close_lists()
             paragraph.append(stripped_line)
         else:
             process_paragraph()
-            in_unordered_list, in_ordered_list = close_lists()
+            close_lists()
 
     process_paragraph()
-    in_unordered_list, in_ordered_list = close_lists()
 
     return '\n'.join(html_lines)
 

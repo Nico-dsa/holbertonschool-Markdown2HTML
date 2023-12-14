@@ -3,20 +3,20 @@
 import sys
 import os
 import re
+import hashlib
 
 def format_text(text):
-    # Format bold and italic
-    text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
-    text = re.sub(r'__(.*?)__', r'<em>\1</em>', text)
-
-    # Convert [[text]] to MD5
-    def md5_replacer(match):
+    # Convert [[text]] to its MD5 hash (lowercase)
+    def convert_md5(match):
         return hashlib.md5(match.group(1).encode()).hexdigest()
 
-    text = re.sub(r'\[\[(.*?)\]\]', md5_replacer, text)
+    text = re.sub(r'\[\[(.*?)\]\]', convert_md5, text)
 
-    # Remove 'c' or 'C' from ((text))
-    text = re.sub(r'\(\((.*?)\)\)', lambda match: match.group(1).replace('c', '').replace('C', ''), text)
+    # Remove all 'c' or 'C' from ((text))
+    def remove_c(match):
+        return match.group(1).replace('c', '').replace('C', '')
+
+    text = re.sub(r'\(\((.*?)\)\)', remove_c, text)
 
     return text
 
@@ -35,7 +35,7 @@ def markdown_to_html(lines):
             html_lines.append("</ol>")
             in_ordered_list = False
 
-    def process_paragraph():
+    def process_paragraph(paragraph):
         if paragraph:
             text = " ".join(paragraph)
             text = format_text(text)
@@ -46,35 +46,35 @@ def markdown_to_html(lines):
         stripped_line = line.strip()
 
         if stripped_line.startswith('#'):
-            process_paragraph()
+            process_paragraph(paragraph)
             close_lists()
             # Handling headings
             heading_level = stripped_line.count('#')
             stripped_line = stripped_line.strip('# ')
-            html_lines.append(f"<h{heading_level}>{format_text(stripped_line)}</h{heading_level}>")
+            html_lines.append(f"<h{heading_level}>{stripped_line}</h{heading_level}>")
         elif stripped_line.startswith('- '):
-            process_paragraph()
+            process_paragraph(paragraph)
             if not in_unordered_list:
                 in_unordered_list = True
                 html_lines.append("<ul>")
             stripped_line = stripped_line.strip('- ')
-            html_lines.append(f"<li>{format_text(stripped_line)}</li>")
+            html_lines.append(f"<li>{stripped_line}</li>")
         elif stripped_line.startswith('* '):
-            process_paragraph()
+            process_paragraph(paragraph)
             if not in_ordered_list:
                 in_ordered_list = True
                 html_lines.append("<ol>")
             stripped_line = stripped_line.strip('* ')
-            html_lines.append(f"<li>{format_text(stripped_line)}</li>")
+            html_lines.append(f"<li>{stripped_line}</li>")
         elif stripped_line:
             if in_unordered_list or in_ordered_list:
                 close_lists()
             paragraph.append(stripped_line)
         else:
-            process_paragraph()
+            process_paragraph(paragraph)
             close_lists()
 
-    process_paragraph()
+    process_paragraph(paragraph)
 
     return '\n'.join(html_lines)
 

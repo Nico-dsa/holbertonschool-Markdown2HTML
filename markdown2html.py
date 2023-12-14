@@ -4,6 +4,11 @@ import sys
 import os
 import re
 
+def format_text(text):
+    text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+    text = re.sub(r'__(.*?)__', r'<em>\1</em>', text)
+    return text
+
 def markdown_to_html(lines):
     html_lines = []
     in_unordered_list = False
@@ -21,10 +26,11 @@ def markdown_to_html(lines):
 
     def process_paragraph():
         if paragraph:
-            text = " ".join(paragraph)
-            text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
-            text = re.sub(r'__(.*?)__', r'<em>\1</em>', text)
-            html_lines.append(f"<p>{text}</p>")
+            html_lines.append("<p>")
+            for p_line in paragraph:
+                html_lines.append(format_text(p_line) + "<br />")
+            html_lines[-1] = html_lines[-1].rstrip("<br />")  # Remove last <br />
+            html_lines.append("</p>")
             paragraph.clear()
 
     for line in lines:
@@ -36,21 +42,21 @@ def markdown_to_html(lines):
             # Handling headings
             heading_level = stripped_line.count('#')
             stripped_line = stripped_line.strip('# ')
-            html_lines.append(f"<h{heading_level}>{stripped_line}</h{heading_level}>")
+            html_lines.append(f"<h{heading_level}>{format_text(stripped_line)}</h{heading_level}>")
         elif stripped_line.startswith('- '):
             process_paragraph()
             if not in_unordered_list:
                 in_unordered_list = True
                 html_lines.append("<ul>")
             stripped_line = stripped_line.strip('- ')
-            html_lines.append(f"<li>{stripped_line}</li>")
+            html_lines.append(f"<li>{format_text(stripped_line)}</li>")
         elif stripped_line.startswith('* '):
             process_paragraph()
             if not in_ordered_list:
                 in_ordered_list = True
                 html_lines.append("<ol>")
             stripped_line = stripped_line.strip('* ')
-            html_lines.append(f"<li>{stripped_line}</li>")
+            html_lines.append(f"<li>{format_text(stripped_line)}</li>")
         elif stripped_line:
             if in_unordered_list or in_ordered_list:
                 close_lists()
@@ -64,7 +70,6 @@ def markdown_to_html(lines):
     return '\n'.join(html_lines)
 
 def main():
-    # Check if the number of arguments is less than 2
     if len(sys.argv) < 3:
         print("Usage: ./markdown2html.py README.md README.html", file=sys.stderr)
         sys.exit(1)
@@ -72,7 +77,6 @@ def main():
     markdown_file = sys.argv[1]
     output_file = sys.argv[2]
 
-    # Check if the Markdown file exists
     if not os.path.exists(markdown_file):
         print(f"Missing {markdown_file}", file=sys.stderr)
         sys.exit(1)

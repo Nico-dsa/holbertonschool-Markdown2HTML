@@ -5,8 +5,19 @@ import os
 import re
 
 def format_text(text):
+    # Format bold and italic
     text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
     text = re.sub(r'__(.*?)__', r'<em>\1</em>', text)
+
+    # Convert [[text]] to MD5
+    def md5_replacer(match):
+        return hashlib.md5(match.group(1).encode()).hexdigest()
+
+    text = re.sub(r'\[\[(.*?)\]\]', md5_replacer, text)
+
+    # Remove 'c' or 'C' from ((text))
+    text = re.sub(r'\(\((.*?)\)\)', lambda match: match.group(1).replace('c', '').replace('C', ''), text)
+
     return text
 
 def markdown_to_html(lines):
@@ -26,11 +37,9 @@ def markdown_to_html(lines):
 
     def process_paragraph():
         if paragraph:
-            html_lines.append("<p>")
-            for p_line in paragraph:
-                html_lines.append(format_text(p_line) + "<br />")
-            html_lines[-1] = html_lines[-1].rstrip("<br />")  # Remove last <br />
-            html_lines.append("</p>")
+            text = " ".join(paragraph)
+            text = format_text(text)
+            html_lines.append(f"<p>{text}</p>")
             paragraph.clear()
 
     for line in lines:
